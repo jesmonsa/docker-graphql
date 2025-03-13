@@ -7,9 +7,7 @@ on:
     branches: [ "main" ]
 
 jobs:
-
   build:
-
     runs-on: ubuntu-latest
 
     steps:
@@ -18,14 +16,41 @@ jobs:
       with:
         fetch-depth: 0
 
+    - name: Debug Environment Variables
+      run: |
+        echo "DOCKER_USER is set: [${{ secrets.DOCKER_USER != '' }}]"
+        echo "DOCKER_PASSWORD length: ${#DOCKER_PASSWORD}"
+      env:
+        DOCKER_USER: ${{ secrets.DOCKER_USER }}
+        DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+
+    - name: Validate Docker Credentials
+      run: |
+        if [[ -z "${DOCKER_USER}" ]]; then
+          echo "ERROR: DOCKER_USER is not set or empty!"
+          exit 1
+        fi
+        if [[ -z "${DOCKER_PASSWORD}" ]]; then
+          echo "ERROR: DOCKER_PASSWORD is not set or empty!"
+          exit 1
+        fi
+      env:
+        DOCKER_USER: ${{ secrets.DOCKER_USER }}
+        DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+
     - name: Docker login
-      env: 
+      env:
         DOCKER_USER: ${{ secrets.DOCKER_USER }}
         DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
       run: |
-        echo "Iniciando login"
-        docker login -u $DOCKER_USER -p $DOCKER_PASSWORD
-        echo "Fin del login"
-        
-#    - name: Build the Docker image
-#      run: docker build . --file Dockerfile --tag my-image-name:$(date +%s)
+        echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USER" --password-stdin
+        if [ $? -ne 0 ]; then
+          echo "ERROR: Docker login failed. Check your credentials."
+          exit 1
+        fi
+        echo "✅ Docker login successful!"
+
+    - name: Build and Tag Docker Image
+      run: |
+        docker build -t my-image-name:$(date +%s) -f Dockerfile .
+
