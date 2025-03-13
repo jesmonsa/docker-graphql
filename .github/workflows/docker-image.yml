@@ -50,7 +50,15 @@ jobs:
         fi
         echo "✅ Docker login successful!"
 
-    - name: Build and Tag Docker Image
+    - name: Build Docker image
       run: |
-        docker build -t my-image-name:$(date +%s) -f Dockerfile .
+        docker build -t jesmonsa/docker-graphql:0.0.2 .
 
+    - name: Push Docker image
+      run: |
+        docker push jesmonsa/docker-graphql:0.0.2 .
+    
+    
+    
+    
+    
