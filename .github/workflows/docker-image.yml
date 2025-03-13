@@ -27,11 +27,11 @@ jobs:
     - name: Validate Docker Credentials
       run: |
         if [[ -z "${DOCKER_USER}" ]]; then
-          echo "ERROR: DOCKER_USER is not set or empty!"
+          echo "❌ ERROR: DOCKER_USER is not set or empty!"
           exit 1
         fi
         if [[ -z "${DOCKER_PASSWORD}" ]]; then
-          echo "ERROR: DOCKER_PASSWORD is not set or empty!"
+          echo "❌ ERROR: DOCKER_PASSWORD is not set or empty!"
           exit 1
         fi
       env:
@@ -45,20 +45,22 @@ jobs:
       run: |
         echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USER" --password-stdin
         if [ $? -ne 0 ]; then
-          echo "ERROR: Docker login failed. Check your credentials."
+          echo "❌ ERROR: Docker login failed. Check your credentials."
           exit 1
         fi
         echo "✅ Docker login successful!"
 
+    - name: Define Image Version
+      run: echo "IMAGE_TAG=0.0.$(date +%s)" >> $GITHUB_ENV
+
     - name: Build Docker image
       run: |
-        docker build -t jesmonsa/docker-graphql:0.0.2 .
+        docker build -t jesmonsa/docker-graphql:${{ env.IMAGE_TAG }} .
 
     - name: Push Docker image
       run: |
-        docker push jesmonsa/docker-graphql:0.0.2
-    
-    
-    
-    
-    
+        docker push jesmonsa/docker-graphql:${{ env.IMAGE_TAG }}
+
+    - name: Show Published Image Tag
+      run: |
+        echo "✅ Image pushed successfully: jesmonsa/docker-graphql:${{ env.IMAGE_TAG }}"
