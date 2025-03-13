@@ -16,6 +16,19 @@ jobs:
       with:
         fetch-depth: 0
 
+    - name: Set up Git
+      run: |
+        git config --global user.name "github-actions"
+        git config --global user.email "action@github.com"
+
+    - name: Determine Semantic Version
+      id: semver
+      uses: PaulHatch/semantic-version@v4.0.3
+      with:
+        tag_prefix: "v"
+        major_pattern: "(MAJOR)"
+        minor_pattern: "(MINOR)"
+
     - name: Debug Environment Variables
       run: |
         echo "DOCKER_USER is set: [${{ secrets.DOCKER_USER != '' }}]"
@@ -27,11 +40,11 @@ jobs:
     - name: Validate Docker Credentials
       run: |
         if [[ -z "${DOCKER_USER}" ]]; then
-          echo "❌ ERROR: DOCKER_USER is not set or empty!"
+          echo "❌ ERROR: DOCKER_USER is not set o vacío!"
           exit 1
         fi
         if [[ -z "${DOCKER_PASSWORD}" ]]; then
-          echo "❌ ERROR: DOCKER_PASSWORD is not set or empty!"
+          echo "❌ ERROR: DOCKER_PASSWORD is not set o vacío!"
           exit 1
         fi
       env:
@@ -45,22 +58,23 @@ jobs:
       run: |
         echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USER" --password-stdin
         if [ $? -ne 0 ]; then
-          echo "❌ ERROR: Docker login failed. Check your credentials."
+          echo "❌ ERROR: Docker login fallido. Verifica tus credenciales."
           exit 1
         fi
-        echo "✅ Docker login successful!"
-
-    - name: Define Image Version
-      run: echo "IMAGE_TAG=0.0.$(date +%s)" >> $GITHUB_ENV
+        echo "✅ Docker login exitoso!"
 
     - name: Build Docker image
       run: |
-        docker build -t jesmonsa/docker-graphql:${{ env.IMAGE_TAG }} .
+        IMAGE_TAG=${{ steps.semver.outputs.version }}
+        docker build -t jesmonsa/docker-graphql:${IMAGE_TAG} .
 
     - name: Push Docker image
       run: |
-        docker push jesmonsa/docker-graphql:${{ env.IMAGE_TAG }}
+        IMAGE_TAG=${{ steps.semver.outputs.version }}
+        docker push jesmonsa/docker-graphql:${IMAGE_TAG}
 
     - name: Show Published Image Tag
       run: |
-        echo "✅ Image pushed successfully: jesmonsa/docker-graphql:${{ env.IMAGE_TAG }}"
+        IMAGE_TAG=${{ steps.semver.outputs.version }}
+        echo "✅ Imagen publicada exitosamente: jesmonsa/docker-graphql:${IMAGE_TAG}"
+
