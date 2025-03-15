@@ -5,6 +5,11 @@ on:
     branches: [ "main" ] 
   pull_request: 
     branches: [ "main" ] 
+
+# Permisos necesarios para crear y publicar tags
+permissions:
+  contents: write
+  packages: write
  
 jobs: 
   build: 
@@ -35,8 +40,6 @@ jobs:
         bump_each_commit: true
         # Evitar que el versionado se rompa si no hay commits previos
         initial_version: "0.0.0"
-        # Para versiones mayores, asegurar que incrementa correctamente
-        version_format: "${major}.${minor}.${patch}-prerelease.${increment}"
  
     - name: Debug Version Info
       run: |
