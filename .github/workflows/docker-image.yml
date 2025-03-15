@@ -1,84 +1,94 @@
-name: Docker Image CI
 
-on:
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-
-    - name: Set up Git
+name: Docker Image CI 
+ 
+on: 
+  push: 
+    branches: [ "main" ] 
+  pull_request: 
+    branches: [ "main" ] 
+ 
+jobs: 
+  build: 
+    runs-on: ubuntu-latest 
+ 
+    steps: 
+    - name: Checkout code 
+      uses: actions/checkout@v4 
+      with: 
+        fetch-depth: 0 
+ 
+    - name: Set up Git 
+      run: | 
+        git config --global user.name "github-actions" 
+        git config --global user.email "action@github.com" 
+ 
+    - name: Determine Semantic Version 
+      id: version 
+      uses: PaulHatch/semantic-version@v4.0.3 
+      with: 
+        tag_prefix: "v" 
+        major_pattern: "BREAKING CHANGE:|^MAJOR:" 
+        minor_pattern: "^feat[(]?\\w*[)]?:" 
+        patch_pattern: "^fix[(]?\\w*[)]?:|^docs[(]?\\w*[)]?:|^refactor[(]?\\w*[)]?:|^style[(]?\\w*[)]?:|^test[(]?\\w*[)]?:|^chore[(]?\\w*[)]?:" 
+        format: "${major}.${minor}.${patch}" 
+        search_commit_body: true
+        bump_each_commit: true
+ 
+    - name: Debug Version Info
       run: |
-        git config --global user.name "github-actions"
-        git config --global user.email "action@github.com"
-
-    - name: Determine Semantic Version
-      id: version
-      uses: PaulHatch/semantic-version@v4.0.3
-      with:
-        tag_prefix: "v"
-        major_pattern: "^(MAJOR|BREAKING CHANGE):"
-        minor_pattern: "^feat:"
-        patch_pattern: "^fix:"
-        format: "${major}.${minor}.${patch}"
-
-    - name: Debug Environment Variables
-      run: |
-        echo "DOCKER_USER is set: [${{ secrets.DOCKER_USER != '' }}]"
-        echo "DOCKER_PASSWORD length: ${#DOCKER_PASSWORD}"
-        echo "Calculated Docker Image Version: ${{ steps.version.outputs.version }}"
-      env:
-        DOCKER_USER: ${{ secrets.DOCKER_USER }}
-        DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
-
-    - name: Validate Docker Credentials
-      run: |
-        if [[ -z "${DOCKER_USER}" ]]; then
-          echo "❌ ERROR: DOCKER_USER is not set o vacío!"
-          exit 1
-        fi
-        if [[ -z "${DOCKER_PASSWORD}" ]]; then
-          echo "❌ ERROR: DOCKER_PASSWORD is not set o vacío!"
-          exit 1
-        fi
-      env:
-        DOCKER_USER: ${{ secrets.DOCKER_USER }}
-        DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
-
-    - name: Docker login
-      env:
-        DOCKER_USER: ${{ secrets.DOCKER_USER }}
-        DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
-      run: |
-        echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USER" --password-stdin
-        if [ $? -ne 0 ]; then
-          echo "❌ ERROR: Docker login fallido. Verifica tus credenciales."
-          exit 1
-        fi
-        echo "✅ Docker login exitoso!"
-
-    - name: Build Docker image
-      run: |
-        IMAGE_TAG=${{ steps.version.outputs.version }}
-        docker build -t jesmonsa/docker-graphql:${IMAGE_TAG} .
-
-    - name: Push Docker image
-      run: |
-        IMAGE_TAG=${{ steps.version.outputs.version }}
-        docker push jesmonsa/docker-graphql:${IMAGE_TAG}
-
-    - name: Show Published Image Tag
-      run: |
-        IMAGE_TAG=${{ steps.version.outputs.version }}
+        echo "Previous Version: ${{ steps.version.outputs.previous_version }}"
+        echo "New Version: ${{ steps.version.outputs.version }}"
+        echo "Major: ${{ steps.version.outputs.major }}"
+        echo "Minor: ${{ steps.version.outputs.minor }}"
+        echo "Patch: ${{ steps.version.outputs.patch }}"
+ 
+    - name: Debug Environment Variables 
+      run: | 
+        echo "DOCKER_USER is set: [${{ secrets.DOCKER_USER != '' }}]" 
+        echo "DOCKER_PASSWORD length: ${#DOCKER_PASSWORD}" 
+        echo "Calculated Docker Image Version: ${{ steps.version.outputs.version }}" 
+      env: 
+        DOCKER_USER: ${{ secrets.DOCKER_USER }} 
+        DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }} 
+ 
+    - name: Validate Docker Credentials 
+      run: | 
+        if [[ -z "${DOCKER_USER}" ]]; then 
+          echo "❌ ERROR: DOCKER_USER is not set o vacío!" 
+          exit 1 
+        fi 
+        if [[ -z "${DOCKER_PASSWORD}" ]]; then 
+          echo "❌ ERROR: DOCKER_PASSWORD is not set o vacío!" 
+          exit 1 
+        fi 
+      env: 
+        DOCKER_USER: ${{ secrets.DOCKER_USER }} 
+        DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }} 
+ 
+    - name: Docker login 
+      env: 
+        DOCKER_USER: ${{ secrets.DOCKER_USER }} 
+        DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }} 
+      run: | 
+        echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USER" --password-stdin 
+        if [ $? -ne 0 ]; then 
+          echo "❌ ERROR: Docker login fallido. Verifica tus credenciales." 
+          exit 1 
+        fi 
+        echo "✅ Docker login exitoso!" 
+ 
+    - name: Build Docker image 
+      run: | 
+        IMAGE_TAG=${{ steps.version.outputs.version }} 
+        docker build -t jesmonsa/docker-graphql:${IMAGE_TAG} . 
+ 
+    - name: Push Docker image 
+      run: | 
+        IMAGE_TAG=${{ steps.version.outputs.version }} 
+        docker push jesmonsa/docker-graphql:${IMAGE_TAG} 
+ 
+    - name: Show Published Image Tag 
+      run: | 
+        IMAGE_TAG=${{ steps.version.outputs.version }} 
         echo "✅ Imagen publicada exitosamente: jesmonsa/docker-graphql:${IMAGE_TAG}"
-
-
