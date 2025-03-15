@@ -22,17 +22,19 @@ jobs:
         git config --global user.email "action@github.com"
 
     - name: Determine Semantic Version
-      id: semver
+      id: version
       uses: PaulHatch/semantic-version@v4.0.3
       with:
         tag_prefix: "v"
-        major_pattern: "(MAJOR)"
-        minor_pattern: "(MINOR)"
+        major_pattern: "^(MAJOR|BREAKING CHANGE):"
+        minor_pattern: "^feat:"
+        format: "${major}.${minor}.${patch}"
 
     - name: Debug Environment Variables
       run: |
         echo "DOCKER_USER is set: [${{ secrets.DOCKER_USER != '' }}]"
         echo "DOCKER_PASSWORD length: ${#DOCKER_PASSWORD}"
+        echo "Calculated Docker Image Version: ${{ steps.version.outputs.version }}"
       env:
         DOCKER_USER: ${{ secrets.DOCKER_USER }}
         DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
@@ -65,16 +67,17 @@ jobs:
 
     - name: Build Docker image
       run: |
-        IMAGE_TAG=${{ steps.semver.outputs.version }}
+        IMAGE_TAG=${{ steps.version.outputs.version }}
         docker build -t jesmonsa/docker-graphql:${IMAGE_TAG} .
 
     - name: Push Docker image
       run: |
-        IMAGE_TAG=${{ steps.semver.outputs.version }}
+        IMAGE_TAG=${{ steps.version.outputs.version }}
         docker push jesmonsa/docker-graphql:${IMAGE_TAG}
 
     - name: Show Published Image Tag
       run: |
-        IMAGE_TAG=${{ steps.semver.outputs.version }}
+        IMAGE_TAG=${{ steps.version.outputs.version }}
         echo "✅ Imagen publicada exitosamente: jesmonsa/docker-graphql:${IMAGE_TAG}"
+
 
