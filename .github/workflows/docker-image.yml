@@ -1,5 +1,3 @@
-
-
 name: Docker Image CI 
  
 on: 
@@ -14,7 +12,7 @@ jobs:
  
     steps: 
     - name: Checkout code 
-      uses: actions/checkout@v4 
+      uses: actions/checkout@v4
       with: 
         fetch-depth: 0 
  
@@ -28,12 +26,17 @@ jobs:
       uses: PaulHatch/semantic-version@v4.0.3 
       with: 
         tag_prefix: "v" 
-        major_pattern: "BREAKING CHANGE:|^MAJOR:" 
-        minor_pattern: "^feat[(]?\\w*[)]?:" 
-        patch_pattern: "^fix[(]?\\w*[)]?:|^docs[(]?\\w*[)]?:|^refactor[(]?\\w*[)]?:|^style[(]?\\w*[)]?:|^test[(]?\\w*[)]?:|^chore[(]?\\w*[)]?:" 
+        # Simplificamos los patrones para mayor fiabilidad
+        major_pattern: "BREAKING CHANGE"
+        minor_pattern: "^feat:"
+        patch_pattern: "^fix:|^docs:|^style:|^refactor:|^perf:|^test:|^chore:"
         format: "${major}.${minor}.${patch}" 
         search_commit_body: true
         bump_each_commit: true
+        # Evitar que el versionado se rompa si no hay commits previos
+        initial_version: "0.0.0"
+        # Para versiones mayores, asegurar que incrementa correctamente
+        version_format: "${major}.${minor}.${patch}-prerelease.${increment}"
  
     - name: Debug Version Info
       run: |
@@ -42,15 +45,15 @@ jobs:
         echo "Major: ${{ steps.version.outputs.major }}"
         echo "Minor: ${{ steps.version.outputs.minor }}"
         echo "Patch: ${{ steps.version.outputs.patch }}"
+        echo "Last commit message: $(git log -1 --pretty=%B)"
  
-    - name: Debug Environment Variables 
-      run: | 
-        echo "DOCKER_USER is set: [${{ secrets.DOCKER_USER != '' }}]" 
-        echo "DOCKER_PASSWORD length: ${#DOCKER_PASSWORD}" 
-        echo "Calculated Docker Image Version: ${{ steps.version.outputs.version }}" 
-      env: 
-        DOCKER_USER: ${{ secrets.DOCKER_USER }} 
-        DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }} 
+    - name: Create Git Tag
+      if: github.event_name != 'pull_request'
+      run: |
+        VERSION=${{ steps.version.outputs.version }}
+        git tag v${VERSION}
+        git push origin v${VERSION}
+        echo "✅ Creado y publicado tag v${VERSION}"
  
     - name: Validate Docker Credentials 
       run: | 
@@ -82,13 +85,17 @@ jobs:
       run: | 
         IMAGE_TAG=${{ steps.version.outputs.version }} 
         docker build -t jesmonsa/docker-graphql:${IMAGE_TAG} . 
+        # También etiquetamos como latest
+        docker build -t jesmonsa/docker-graphql:latest .
  
     - name: Push Docker image 
       run: | 
         IMAGE_TAG=${{ steps.version.outputs.version }} 
-        docker push jesmonsa/docker-graphql:${IMAGE_TAG} 
+        docker push jesmonsa/docker-graphql:${IMAGE_TAG}
+        docker push jesmonsa/docker-graphql:latest
  
     - name: Show Published Image Tag 
       run: | 
         IMAGE_TAG=${{ steps.version.outputs.version }} 
         echo "✅ Imagen publicada exitosamente: jesmonsa/docker-graphql:${IMAGE_TAG}"
+        echo "✅ Imagen publicada exitosamente: jesmonsa/docker-graphql:latest"
