@@ -25,9 +25,10 @@ jobs:
       id: version
       uses: PaulHatch/semantic-version@v4.0.3
       with:
-        tag_prefix: ""
+        tag_prefix: "v"
         major_pattern: "^(MAJOR|BREAKING CHANGE):"
         minor_pattern: "^feat:"
+        patch_pattern: "^fix:"
         format: "${major}.${minor}.${patch}"
 
     - name: Debug Environment Variables
